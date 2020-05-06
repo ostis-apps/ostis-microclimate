@@ -10,11 +10,11 @@ import tqdm
 import settings
 
 
-class ArduinoConnectionError(Exception):
+class MicroControllerConnectionError(Exception):
     pass
 
 
-class ArduinoConnection:
+class MicroControllerConnection:
     def __init__(self):
         self.baudrate = 0
         self.timeout = 0
@@ -46,16 +46,16 @@ class ArduinoConnection:
         else:
             raise EnvironmentError('Unsupported platform')
         
-        arduino = None
+        micro_controller = None
         for port_ in tqdm.tqdm(ports):
             try:
-                arduino = serial.Serial(port_, self.baudrate, timeout=self.timeout)
+                micro_controller = serial.Serial(port_, self.baudrate, timeout=self.timeout)
             except (OSError, serial.SerialException):
                 pass
             else:
-                if arduino.readline() == b'__transmitting\r\n':
-                    arduino.flushInput()
-                    arduino.write(b'__recieved')
+                if micro_controller.readline() == b'__transmitting\r\n':
+                    micro_controller.flushInput()
+                    micro_controller.write(b'__recieved')
 
                     config_data = {
                         'baudrate': self.baudrate,
@@ -67,9 +67,9 @@ class ArduinoConnection:
                         json.dump(config_data, outfile, indent=4)
                     
                     self.port = port_
-                    arduino.close()
+                    micro_controller.close()
 
         if self.port:
             print('Working with {}, {} baudrate'.format(self.port, self.baudrate))
         else:
-            raise ArduinoConnectionError
+            raise MicroControllerConnectionError
