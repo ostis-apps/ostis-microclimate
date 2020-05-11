@@ -411,12 +411,15 @@ class HardwareClient:
 
     async def send_microclimate_parameters(self):
         async with websockets.connect(self.uri) as websocket:
-            data = self._get_data_to_send()              
+            while True:
+                data = self._get_data_to_send()              
 
-            await websocket.send(json.dumps(data))
+                await websocket.send(json.dumps(data))
 
-            response = await websocket.recv()
-            print(response)
+                response = await websocket.recv()
+                print(response)
+                await asyncio.sleep(5)
 
     def run(self):
-        asyncio.get_event_loop().run_until_complete(self.send_microclimate_parameters())    
+        asyncio.get_event_loop().run_until_complete(self.send_microclimate_parameters())
+        asyncio.get_event_loop().run_forever() 
