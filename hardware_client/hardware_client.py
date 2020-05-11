@@ -1,25 +1,419 @@
+import json
 import asyncio
 import websockets
+from datetime import datetime
 
-from micro_controller_connection import MicroControllerConnection, MicroControllerConnectionError
+from comport_connection import ComportConnection, ComportConnectionError
 from serializers import ComportSerializer
+import settings
 
 
 class HardwareClient:
     def __init__(self, uri):
-    self.mk_connection = MicroControllerConnection()
-    self.uri = uri
+        self.mk_connection = ComportConnection()
+        self.uri = uri
+        self.serializer = ComportSerializer()
+        self.request_id = 2
+        self.idtf_ids = dict()
 
-    try:
-        self.mk_connection.connect()
-    except MicroControllerConnectionError:
-        # The last attempt to reconnect. There are sometimes issues
-        # with connection from the first time
-        self.mk_connection.connect()
+        try:
+            self.mk_connection.connect()
+        except ComportConnectionError:
+            # The last attempt to reconnect. There are sometimes issues
+            # with connection from the first time
+            self.mk_connection.connect()
 
-    async def send_microclimate_parameters(self, data):
+        self._init_idtf_ids()
+
+    async def receive_idtf(self, data):
+        async with websockets.connect(self.uri) as websocket:         
+            await websocket.send(json.dumps(data))
+            response = await websocket.recv()
+            response = json.loads(response)
+
+            self.idtf_ids = dict(zip(settings.IDTF, response['payload']))
+            print('Kyenodes received')
+
+
+    def _init_idtf_ids(self):
+        data = {
+            'id': 1,
+            'type': 'keynodes',
+            'payload': []
+        }
+
+        for idtf in settings.IDTF:
+            data['payload'].append({
+                    'command': 'find',
+                    'idtf': idtf
+                })
+
+        asyncio.get_event_loop().run_until_complete(self.receive_idtf(data))
+        
+    
+    def _get_data_to_send(self):
+        mk_data = self.serializer.serialize()
+        timestamp = str(datetime.now().strftime('%d-%b-%Y (%H:%M:%S)'))
+
+        data = dict()
+        data['id'] = self.request_id
+        data['type'] = 'create_elements'
+
+        payload = [
+            # new instance of microclimate_record
+            # 0
+            {
+                "el": "node",
+                "type": 1
+            },
+            # microclimate_record -> instance
+            # 1
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value": 0
+                },
+                "trg": {
+                    "type": "addr",
+                    "value": self.idtf_ids['microclimate_record']
+                },
+                "type": 2224
+            },
+            # instance -> office
+            # 2
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value": 0
+                },
+                "trg": {
+                    "type": "addr",
+                    "value": self.idtf_ids['office']
+                },
+                "type": 2224
+            },
+            # rrel_mesurement_place
+            # 3
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value":  self.idtf_ids['rrel_mesurement_place']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 2
+                },
+                "type": 2224
+            },
+            # time mesurment instance
+            # 4
+            {
+                "el": "node",
+                "type": 1
+            },
+            # instance -> time mesurment instance
+            # 5
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value":  0
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 4
+                },
+                "type": 2224
+            },
+            # rrel_mesurement_time
+            # 6
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value":  self.idtf_ids['rrel_mesurement_time']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 5
+                },
+                "type": 2224
+            },
+            # link
+            # 7
+            {
+                "el": "link",
+                "type": 1,
+                "content": timestamp,
+                "content_type": "string"
+            },
+            # time mesurment instance => link
+            # 8
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value":  4
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 7
+                },
+                "type": 40
+            },
+            # humidity instance
+            # 9
+            {
+                "el": "node",
+                "type": 1
+            },
+            # microclimate_record instance -> humidity instance
+            # 10
+            {
+
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value":  0
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 9
+                },
+                "type": 2224
+            },
+            # procental mesurement instance
+            # 11
+            {
+                "el": "node",
+                "type": 1
+            },
+            # humidity instance => percental mesurement instance
+            # 12
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value":  9
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 11
+                },
+                "type": 40 
+            },
+            # nrel_percental_mesurement
+            # 13
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['nrel_percental_mesurement']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 11
+                },
+                "type": 2224
+            },
+            # humidity value
+            # 14
+            {
+                "el": "link",
+                "type": 1,
+                "content": mk_data['humi'],
+                "content_type": "float"
+            },
+            # percental mesurement instance => humidity value
+            # 15
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value": 11
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 14
+                },
+                "type": 40 
+            },
+            # nrel_value
+            # 16
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['nrel_value']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 15
+                },
+                "type": 2224
+            },
+            # temperature instance
+            # 17
+            {
+                "el": "node",
+                "type": 1
+            },
+            # temperature -> temperature instance
+            # 18
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['temperature']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 17
+                },
+                "type": 2224
+            },
+            # microclimate_record -> temperature instance
+            # 19
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value": 1
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 17
+                },
+                "type": 2224
+            },
+            # value -> temperature_instance
+            # 20
+            {
+
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['value']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 17
+                },
+                "type": 2224
+            },
+            # value -> humidity_instance
+            # 20
+            {
+
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['value']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 14
+                },
+                "type": 2224
+            },
+            # number instance
+            # 21
+            {
+                "el": "node",
+                "type": 1
+            },
+            # temperature instance => number instance
+            # 22
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value": 17
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 21
+                },
+                "type": 40
+            },
+            # nrel_celsius_mesurement
+            # 23
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['nrel_celsius_mesurement']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 22
+                },
+                "type": 2224
+            },
+            # number -> number_instance
+            # 24
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['number']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 21
+                },
+                "type": 2224
+            },
+            # link
+            # 25
+            {
+                "el": "link",
+                "type": 1,
+                "content": mk_data['temp'],
+                "content_type": "float"
+            },
+            # number_instance => link
+            # 26
+            {
+                "el": "edge",
+                "src": {
+                    "type": "ref",
+                    "value": 21
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 25
+                },
+                "type": 40
+            },
+            # nrel_value
+            # 27
+            {
+                "el": "edge",
+                "src": {
+                    "type": "addr",
+                    "value": self.idtf_ids['nrel_value']
+                },
+                "trg": {
+                    "type": "ref",
+                    "value": 26
+                },
+                "type": 2224
+            }
+        ]
+        data['payload'] = payload
+
+        self.request_id += 1
+        return data
+
+    async def send_microclimate_parameters(self):
         async with websockets.connect(self.uri) as websocket:
-            await websocket.send(data)
+            data = self._get_data_to_send()              
+
+            await websocket.send(json.dumps(data))
 
             response = await websocket.recv()
             print(response)

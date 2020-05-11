@@ -22,4 +22,3 @@ class ComportSerializer:
             data = json.loads(data)
         
         return data
-            

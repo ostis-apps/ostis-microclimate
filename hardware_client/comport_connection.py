@@ -10,11 +10,11 @@ import tqdm
 import settings
 
 
-class MicroControllerConnectionError(Exception):
+class ComportConnectionError(Exception):
     pass
 
 
-class MicroControllerConnection:
+class ComportConnection:
     def __init__(self):
         self.baudrate = 0
         self.timeout = 0
@@ -72,4 +72,4 @@ class MicroControllerConnection:
         if self.port:
             print('Working with {}, {} baudrate'.format(self.port, self.baudrate))
         else:
-            raise MicroControllerConnectionError
+            raise ComportConnectionError
