@@ -5,23 +5,9 @@ import asyncio
 import websockets
 
 import settings
-from hardware_client import IDTFReceiver
-
-IDTF = [
-    'microclimate_record',
-    'humidity',
-    'temperature',
-    'rrel_mesurement_time',
-    'rrel_mesurement_place',
-    'office',
-    'nrel_value'
-]
 
 
 class MicroclimanteParametersRepresenter:
-    def __init__(self):
-        self.idtfs = IDTFReceiver(IDTF).idtf_ids
-
     def represent(self):
         asyncio.get_event_loop().run_until_complete(self._get_link_data())
 
