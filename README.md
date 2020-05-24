@@ -1,8 +1,8 @@
-# Project Title
+# OSTIS microclimate client
 
 ## Table of Contents
 
-- [Project Title](#project-title)
+- [OSTIS microclimate client](#ostis-microclimate-client)
   - [Table of Contents](#table-of-contents)
   - [About <a name = "about"></a>](#about)
   - [Getting Started <a name = "getting_started"></a>](#getting-started)
