@@ -55,7 +55,7 @@ class ComportConnection:
             else:
                 if micro_controller.readline() == b'__transmitting\r\n':
                     micro_controller.flushInput()
-                    micro_controller.write(b'__recieved')
+                    micro_controller.write(b'__received')
 
                     config_data = {
                         'baudrate': self.baudrate,

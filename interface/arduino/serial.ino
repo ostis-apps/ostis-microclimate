@@ -27,7 +27,7 @@ void connect() {
         Serial.flush();
         delay(1000);
     }
-    while (Serial.readString() != "__recieved\r\n" && Serial.available());
+    while (Serial.readString() != "__received\r\n" && Serial.available());
 
     handshaked = true;
     Serial.flush();

@@ -12,7 +12,7 @@
 
 ## About <a name = "about"></a>
 
-This client is created for providing interaction between OSTIS and microcontrollers by COM-port and WEB-socket. It records microclimate parameters
+This client is created to providing interaction between OSTIS and microcontrollers by COM-port and WEB-socket. It records microclimate parameters
 (such as temperature, humidity, etc.) into SC-memory.
 
 ## Getting Started <a name = "getting_started"></a>
@@ -24,7 +24,7 @@ Dependencies for Python: `tqdm`, `pyserial`, `websockets` (You can use Pipfile f
 
 You need to have Arduino microcontroller (or another microcontroller), module to register parameters from real world and USB-wire.
 
-Dependencies for Arduino (if you will use sketch from `interface/arduino/serial.ino`):
+Dependencies for Arduino (if you use sketch from `interface/arduino/serial.ino`):
 - [TroykaDHT](https://github.com/amperka/TroykaDHT)
 
 See [Installing Additional Arduino Libraries](https://www.arduino.cc/en/guide/libraries)
@@ -34,10 +34,10 @@ See [Installing Additional Arduino Libraries](https://www.arduino.cc/en/guide/li
 - Load `interface/arduino/serial.ino` to your microcontroller (see [HOWTO](https://www.arduino.cc/en/main/howto))
 - Then run `interface/hardware_client/run.py`. The client will scan all COM-ports, found microcontroller and automatically connect. Afrer receiving keynodes the microcontrollers starts to send parameters to OSTIS as following SC-construction.
 ![Example of SC-construction](docs/example.png)
-- To see results from console line run `interdace/hardware_client/get_microclimate_parameters.py`
+- To see results from console line run `interface/hardware_client/get_microclimate_parameters.py`
 
 ## Setting Up <a name = "setting_up"></a>
-The client have a settings file located in `/interface/hardware_client/settings.py`. Let's look at each setting more closely.
+The client have a settings file located `/interface/hardware_client/settings.py`. Let's look at each setting more closely.
 
 - URI -- URI to OSTIS WEB-socket. `ws://localhost:8090/ws_json` by default.
 - CONFIGFILE -- file to store COM-port connection parameters such as baudrate, timeout, COM-port adress. When the client is scanning COM-ports and founding microcontroller this file refreshes.
@@ -47,8 +47,8 @@ The client have a settings file located in `/interface/hardware_client/settings.
 ## Writing custom sketch for microcontroller <a name = "custom_sketch"></a>
 Before sending and receiving data client and microcontroller should perform a handshake. Procedure of handshaking:
 - Microcontroller sends "__transmitting" signal
-- Client recieves "__transmitting" signal and sends "__recieved" signal
-- Microcontroller recieves "recieves" signal
+- Client receives "__transmitting" signal and sends "__recieved" signal
+- Microcontroller receives "__received" signal
 
 After handshaking microcontroller can start sending serialized data as JSON. JSON example:
 ```
@@ -57,4 +57,4 @@ After handshaking microcontroller can start sending serialized data as JSON. JSO
     "humi": 29
 }
 ```
-If a valid data is not recieved from module microcontroller should set "NaN" value of corresponding field.
+If a valid data is not received from module microcontroller should set "NaN" value of corresponding field.
